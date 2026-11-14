@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/helpingdentsu-bot/dentsu-mini-bot">
+  <a href="https://github.com/natsu-242dev/dentsu-mini-bot">
     <img src="assets/dentsu-mini-bot-avatar.jpg" width="150" alt="Dentsu Mini Bot logo" />
   </a>
 </p>
@@ -20,13 +20,21 @@
 </p>
 
 <p align="center">
-  <a href="https://railway.com/new"><img src="https://railway.com/button.svg" alt="Deploy on Railway" /></a>
-  &nbsp;
-  <a href="https://render.com/deploy?repo=https://github.com/helpingdentsu-bot/dentsu-mini-bot"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" /></a>
+  <a href="https://dentsu-mini-bot.vercel.app"><strong>🔗 Site de connexion / Pairing site →</strong> https://dentsu-mini-bot.vercel.app</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/helpingdentsu-bot/dentsu-mini-bot"><img src="https://img.shields.io/badge/GitHub-Source%20code-181717?logo=github&amp;logoColor=white" alt="Open source on GitHub" /></a>
+  <code>npm install</code> then <code>npm start</code> · pairing code <code>DENTSU11</code>
+</p>
+
+<p align="center">
+  <a href="https://railway.com/new"><img src="https://railway.com/button.svg" alt="Deploy on Railway" /></a>
+  &nbsp;
+  <a href="https://render.com/deploy?repo=https://github.com/natsu-242dev/dentsu-mini-bot"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/natsu-242dev/dentsu-mini-bot"><img src="https://img.shields.io/badge/GitHub-Source%20code-181717?logo=github&amp;logoColor=white" alt="Open source on GitHub" /></a>
   <a href="https://t.me/DPLOIEMENT_DUN_BOT2"><img src="https://img.shields.io/badge/Telegram-Community-229ED9?logo=telegram&amp;logoColor=white" alt="Telegram community" /></a>
   <a href="https://whatsapp.com/channel/0029VbC1s7fFnSz1YhZYc01h"><img src="https://img.shields.io/badge/WhatsApp-Channel-25D366?logo=whatsapp&amp;logoColor=white" alt="WhatsApp channel" /></a>
 </p>
@@ -62,7 +70,7 @@ Import this repository into Vercel and keep the project root at the repository r
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
-The button opens Railway's project creation page; it does not silently choose a repository. In Railway, select <strong>Deploy from GitHub repo</strong>, then choose <code>helpingdentsu-bot/dentsu-mini-bot</code> or your own fork.
+The button opens Railway's project creation page; it does not silently choose a repository. In Railway, select <strong>Deploy from GitHub repo</strong>, then choose <code>natsu-242dev/dentsu-mini-bot</code> or your own fork.
 
 1. Add <code>TELEGRAM_BOT_TOKEN</code> under the service's variables. The other API keys are optional.
 2. Add a Railway Volume and mount it at <strong><code>/app/auth_info</code></strong>. This is where the bot stores WhatsApp session files; without persistent storage, a redeploy can require pairing again.
@@ -72,7 +80,7 @@ The button opens Railway's project creation page; it does not silently choose a 
 
 ## Deploy on Render
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/helpingdentsu-bot/dentsu-mini-bot)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/natsu-242dev/dentsu-mini-bot)
 
 This button deploys the <strong>official repository</strong> using its <code>render.yaml</code> Blueprint. To deploy a fork on Render, create a Blueprint from your fork in the Render Dashboard instead; the button above intentionally points to the official source.
 
@@ -88,4 +96,4 @@ Released under the [MIT License](LICENSE).
 
 <strong>Built with care by NatsuTech's Dev 🇨🇬 · Alva'sDev 🇨🇩</strong>
 
-[GitHub repository](https://github.com/helpingdentsu-bot/dentsu-mini-bot) · [Telegram community](https://t.me/DPLOIEMENT_DUN_BOT2) · [WhatsApp channel](https://whatsapp.com/channel/0029VbC1s7fFnSz1YhZYc01h)
+[GitHub repository](https://github.com/natsu-242dev/dentsu-mini-bot) · [Telegram community](https://t.me/DPLOIEMENT_DUN_BOT2) · [WhatsApp channel](https://whatsapp.com/channel/0029VbC1s7fFnSz1YhZYc01h)
