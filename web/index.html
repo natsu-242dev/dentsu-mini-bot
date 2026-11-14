@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12070b">
+  <meta name="description" content="Jumelle ton compte WhatsApp à DENTSU MINIBOT avec un code temporaire ou un QR sécurisé.">
+  <meta property="og:title" content="DENTSU MINI BOT · Jumelage WhatsApp">
+  <meta property="og:description" content="Jumelle ton compte WhatsApp à DENTSU MINIBOT avec un code temporaire ou un QR sécurisé.">
+  <meta property="og:image" content="https://ganga--link--ghhzdp9sv8hk.code.run/i/3ew2ztipih.jpg">
+  <meta property="og:image:alt" content="Dentsu Mini Bot">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:image" content="https://ganga--link--ghhzdp9sv8hk.code.run/i/3ew2ztipih.jpg">
+  <title>DENTSU MINI BOT · Jumelage WhatsApp</title>
+  <link rel="stylesheet" href="/style.css?v=i18n-errors-v2">
+  <script src="/app.js?v=i18n-errors-v2" defer></script>
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="DENTSU MINIBOT, accueil">
+        <img src="/assets/dentsu-mini-bot-avatar.jpg" alt="" class="brand-image">
+        <span class="brand-name">DENTSU MINIBOT</span>
+      </a>
+      <div class="topbar-tools">
+        <div class="language-switch" role="group" aria-label="Language">
+          <button class="language-button" type="button" data-language="fr" aria-pressed="true">FR</button>
+          <button class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Mode clair" aria-pressed="true">
+          <svg class="theme-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 15.2A8.3 8.3 0 0 1 8.8 4a8.6 8.6 0 1 0 11.2 11.2Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="theme-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2m10-10h-2M4 12H2m17.1-7.1-1.4 1.4M6.3 17.7l-1.4 1.4m14.2 0-1.4-1.4M6.3 6.3 4.9 4.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span id="theme-label">Mode clair</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="media-card" aria-labelledby="video-title">
+      <div class="media-heading">
+        <div>
+          <p class="media-eyebrow" data-i18n="mediaEyebrow">SON EN BOUCLE</p>
+          <h2 id="video-title" data-i18n="mediaTitle">Musique de DENTSU</h2>
+          <p class="media-description" data-i18n="mediaDescription">La vidéo tourne en boucle. Active le son pour écouter.</p>
+        </div>
+        <button class="media-sound-button" id="video-sound-toggle" type="button" aria-pressed="false">Activer le son</button>
+      </div>
+      <div class="video-frame">
+        <video id="pairing-video" autoplay muted loop playsinline controls preload="metadata" aria-labelledby="video-title">
+          <source data-src="https://ganga--link--ghhzdp9sv8hk.code.run/i/7qo7cqnwq0.mp4" type="video/mp4">
+          Ton navigateur ne prend pas en charge la lecture vidéo.
+        </video>
+      </div>
+      <p class="video-status" id="video-status" role="status" aria-live="polite" hidden></p>
+    </section>
+
+    <section class="pair-card" aria-labelledby="page-title">
+      <div class="pair-intro">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span><span data-i18n="eyebrow">Jumelage WhatsApp sécurisé</span></p>
+        <h1 id="page-title" data-i18n="pageTitle">DENTSU MINIBOT</h1>
+        <p class="intro" data-i18n="intro">Entre ton numéro ou utilise un QR pour relier ton compte au bot.</p>
+      </div>
+
+      <div class="method-switch" role="tablist" aria-label="Pairing method">
+        <button class="method-tab active" id="tab-code" type="button" role="tab" aria-selected="true" aria-controls="code-view" data-method="code"><span data-i18n="methodCode">Par numéro</span></button>
+        <button class="method-tab" id="tab-qr" type="button" role="tab" aria-selected="false" aria-controls="qr-view" data-method="qr"><span data-i18n="methodQr">Par QR</span></button>
+      </div>
+
+      <section id="code-view" class="method-view" data-method-view="code" aria-labelledby="tab-code">
+        <form id="pair-form" novalidate>
+          <label for="phone-number" data-i18n="phoneLabel">Ton numéro WhatsApp</label>
+          <input id="phone-number" name="phoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+242 06 123 45 67" aria-describedby="phone-hint" required>
+          <p class="hint" id="phone-hint" data-i18n="phoneHint">Indicatif international inclus, de 8 à 15 chiffres.</p>
+          <button class="primary-button" id="generate-button" type="submit"><span class="button-label" data-i18n="generateCode">Générer mon code</span><span aria-hidden="true">→</span></button>
+        </form>
+
+        <p class="status-message" id="status-message" role="status" aria-live="polite" hidden></p>
+
+        <section class="code-panel" id="code-panel" aria-labelledby="code-heading" hidden>
+          <div class="code-header">
+            <div>
+              <p class="code-label" id="code-heading" data-i18n="codeHeading">TON CODE DE JUMELAGE</p>
+              <p class="code-hint" data-i18n="codeHint">Saisis-le dans WhatsApp sur ton téléphone.</p>
+            </div>
+            <span class="expiry" id="expiry-label">60 s</span>
+          </div>
+          <output class="pair-code" id="pair-code" aria-live="polite"></output>
+          <button class="copy-button" id="copy-button" type="button" data-i18n="copyCode">Copier le code</button>
+          <p class="steps" data-i18n="steps">WhatsApp → Appareils connectés → Connecter un appareil → Associer avec un numéro.</p>
+        </section>
+      </section>
+
+      <section id="qr-view" class="method-view qr-view" data-method-view="qr" aria-labelledby="tab-qr" hidden>
+        <div class="qr-frame">
+          <div class="qr-placeholder" id="qr-placeholder">
+            <span aria-hidden="true">▦</span>
+            <b id="qr-placeholder-title" data-i18n="qrPlaceholder">Ton QR apparaîtra ici</b>
+            <small id="qr-placeholder-hint" data-i18n="qrPlaceholderHint">Il est créé uniquement pour ta session.</small>
+          </div>
+          <img id="qr-image" alt="QR code de connexion WhatsApp" hidden>
+        </div>
+        <p class="qr-state" id="qr-state" role="status" aria-live="polite" data-i18n="qrReady">Prêt à générer.</p>
+        <span class="expiry qr-expiry" id="qr-expiry" hidden></span>
+        <button class="primary-button" id="start-qr" type="button"><span class="button-label" data-i18n="generateQr">Générer un QR sécurisé</span><span aria-hidden="true">→</span></button>
+        <p class="qr-instructions" data-i18n="qrInstructions">Dans WhatsApp, ouvre Appareils connectés, puis scanne ce QR.</p>
+      </section>
+
+      <aside class="security-note">
+        <span class="warning-mark" aria-hidden="true">!</span>
+        <p data-i18n="securityText">Utilise uniquement ton propre compte. Ne partage jamais ton code ni ton QR.</p>
+      </aside>
+
+
+    </section>
+
+    <footer class="footer"><span>by NatsuTech's Dev 🇨🇬</span></footer>
+  </main>
+  <div class="consent-overlay" id="consent-gate" hidden>
+    <section class="consent-dialog" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+      <p class="consent-eyebrow" data-i18n="consentEyebrow">AVANT DE CONTINUER</p>
+      <h2 id="consent-title" data-i18n="consentTitle">Confidentialité et conditions</h2>
+      <p class="consent-copy" data-i18n="consentIntro">Nous mémorisons ton choix avec un cookie nécessaire. La langue et le thème peuvent être conservés sur cet appareil. Aucun cookie publicitaire ou analytique n’est configuré.</p>
+      <label class="consent-option">
+        <input type="checkbox" id="consent-cookie">
+        <span data-i18n="consentCookieChoice">J’accepte le cookie nécessaire au consentement et le stockage de mes préférences.</span>
+      </label>
+      <label class="consent-option">
+        <input type="checkbox" id="consent-terms">
+        <span data-i18n-html="consentTerms">J’ai lu et j’accepte les <a href="/terms.txt" target="_blank" rel="noopener">conditions d’utilisation</a>.</span>
+      </label>
+      <p class="consent-error" id="consent-error" role="status" aria-live="polite" hidden></p>
+      <button class="primary-button consent-accept" id="consent-accept" type="button" disabled><span data-i18n="consentAccept">Accepter et continuer</span></button>
+    </section>
+  </div>
+</body>
+</html>
