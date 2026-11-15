@@ -481,25 +481,64 @@ reg(["auto-react", "autoreact"], (ctx) => {
   const action = (ctx.args[0] || "").trim();
   const normalized = action.toLowerCase();
   const current = state.getAutoReact(ctx.jid);
+  const statusLine = current
+    ? current === state.AUTO_REACT_RANDOM
+      ? "🎲 aléatoire (réaction différente à chaque message)"
+      : `*${current}*`
+    : "*OFF*";
 
-  if (["off", "disable", "stop"].includes(normalized)) {
+  if (["off", "disable", "stop", "0"].includes(normalized)) {
     state.setAutoReact(ctx.jid, "");
     return ctx.reply({ text: "🔕 Auto-react *OFF*." });
   }
-  if (["on", "enable", "start"].includes(normalized)) {
-    const emoji = ctx.args[1] || current || "❤️";
-    state.setAutoReact(ctx.jid, emoji);
-    return ctx.reply({ text: "✅ Auto-react *ON* — réaction : *" + emoji + "*." });
+
+  if (["on", "enable", "start", "1"].includes(normalized)) {
+    const choice = (ctx.args[1] || "").trim();
+    if (choice) {
+      state.setAutoReact(ctx.jid, choice);
+      return ctx.reply({ text: `✅ Auto-react *ON* — réaction fixe : *${choice}*` });
+    }
+    state.setAutoReact(ctx.jid, state.AUTO_REACT_RANDOM);
+    return ctx.reply({
+      text: [
+        "✅ Auto-react *ON* — mode *aléatoire* 🎲",
+        `Le bot réagira avec une de ces ${state.AUTO_REACT_EMOJIS.length} réactions :`,
+        state.AUTO_REACT_EMOJIS.join(" "),
+        "",
+        `Réaction fixe : ${config.PREFIX}auto-react on ❤️`,
+        `Couper : ${config.PREFIX}auto-react off`,
+      ].join("\n"),
+    });
   }
-  if (action && !["status", "help"].includes(normalized)) {
+
+  if (["list", "random", "aleatoire", "aléatoire"].includes(normalized)) {
+    return ctx.reply({
+      text: [
+        `🎲 Réactions disponibles (${state.AUTO_REACT_EMOJIS.length}) :`,
+        state.AUTO_REACT_EMOJIS.join(" "),
+        "",
+        `Statut actuel : ${statusLine}`,
+      ].join("\n"),
+    });
+  }
+
+  if (action) {
     state.setAutoReact(ctx.jid, action);
-    return ctx.reply({ text: "✅ Auto-react *ON* — réaction : *" + action + "*." });
+    return ctx.reply({ text: `✅ Auto-react *ON* — réaction fixe : *${action}*` });
   }
-  ctx.reply({ text: current
-    ? "🔔 Auto-react *ON* — réaction : *" + current + "*.\nUsage : " + config.PREFIX + "auto-react off"
-    : "🔕 Auto-react *OFF*.\nUsage : " + config.PREFIX + "auto-react on [emoji]"
+
+  ctx.reply({
+    text: [
+      "🎭 *AUTO-REACT*",
+      `Statut actuel : ${statusLine}`,
+      "",
+      `• ${config.PREFIX}auto-react on — réactions aléatoires 🎲`,
+      `• ${config.PREFIX}auto-react on ❤️ — réaction fixe`,
+      `• ${config.PREFIX}auto-react list — voir les réactions`,
+      `• ${config.PREFIX}auto-react off — désactiver`,
+    ].join("\n"),
   });
-}, "TOOL", "Automatic reactions");
+}, "TOOL", "Réactions automatiques on/off (aléatoire ou fixe)");
 
 reg(["spam"], async (ctx) => {
   if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
@@ -515,6 +554,119 @@ reg(["spam"], async (ctx) => {
   }
   ctx.reply({ text: `✅ ${ok}/${count} sent.` });
 }, "OWNER", "Send N messages (owner)");
+
+// ── STATUSGC : mettre un statut au groupe ─────────────────────
+// Usage :
+//   - répondre à une photo/vidéo avec « statusgc » (+ légende facultative)
+//   - répondre à un texte avec « statusgc »
+//   - « statusgc <texte> » directement
+// La carte de statut est publiée dans le fil de statut du groupe (admins only).
+const GROUP_STATUS_COLORS = {
+  vert: "#25D366", green: "#25D366",
+  bleu: "#34B7F1", blue: "#34B7F1",
+  rouge: "#FF3B30", red: "#FF3B30",
+  jaune: "#FFD700", yellow: "#FFD700",
+  orange: "#FF8C00",
+  violet: "#9C27B0", purple: "#9C27B0",
+  noir: "#000000", black: "#000000",
+  blanc: "#FFFFFF", white: "#FFFFFF",
+  rose: "#E91E63", pink: "#E91E63",
+  cyan: "#00BCD4", teal: "#009688",
+  or: "#C9A227", gold: "#C9A227",
+};
+
+function statusgcColor(raw) {
+  const value = String(raw || "").toLowerCase().replace(/^#/, "");
+  if (/^[0-9a-f]{6}$/i.test(value)) return `#${value}`;
+  return GROUP_STATUS_COLORS[value] || null;
+}
+
+reg(["statusgc", "gcstatus", "groupstatus", "setstatusgc"], async (ctx) => {
+  if (!requireGroupAdmin(ctx)) return;
+  const { postGroupStatus, quotedMedia, quotedMessage, captionFrom, unwrapMessage } = require("./lib/groupStatus");
+
+  // Découpe « text | couleur »
+  const rawArgs = (ctx.args || []).join(" ").trim();
+  let colorArg = null;
+  let typedText = rawArgs;
+  const pipeIdx = rawArgs.lastIndexOf("|");
+  if (pipeIdx > -1) {
+    const maybeColor = statusgcColor(rawArgs.slice(pipeIdx + 1).trim());
+    if (maybeColor) {
+      colorArg = maybeColor;
+      typedText = rawArgs.slice(0, pipeIdx).trim();
+    }
+  }
+
+  try {
+    await ctx.natsu.sendMessage(ctx.jid, { react: { text: "⏳", key: ctx.m.key } });
+  } catch {}
+
+  try {
+    // 1) Pièce jointe citée (photo / vidéo)
+    const media = await quotedMedia(ctx.m, ctx.jid, ctx.natsu).catch(() => null);
+    if (media) {
+      const caption = typedText || media.caption || "";
+      await postGroupStatus(ctx.natsu, ctx.jid, {
+        kind: media.kind,
+        buffer: media.buffer,
+        mimetype: media.mimetype,
+        caption,
+      });
+      try { await ctx.natsu.sendMessage(ctx.jid, { react: { text: "✅", key: ctx.m.key } }); } catch {}
+      return ctx.reply({
+        text: `✅ ${media.kind === "image" ? "Photo" : "Vidéo"} publiée dans le statut du groupe.${caption ? `\n📝 ${caption}` : ""}`,
+      }).catch(() => {});
+    }
+
+    // 2) Texte : soit tapé, soit cité
+    let text = typedText;
+    if (!text) {
+      const quoted = quotedMessage(ctx.m, ctx.jid);
+      const quotedContent = quoted ? unwrapMessage(quoted.message) || {} : {};
+      text = String(quotedContent.conversation || quotedContent.extendedTextMessage?.text || "").trim();
+    }
+    if (!text) text = captionFrom(ctx.m);
+
+    if (!text) {
+      try { await ctx.natsu.sendMessage(ctx.jid, { react: { text: "❓", key: ctx.m.key } }); } catch {}
+      return ctx.reply({
+        text: [
+          "📢 *STATUSGC — statut de groupe*",
+          "",
+          "Envoie une photo/vidéo puis réponds `statusgc` pour la publier en statut.",
+          "Tu peux aussi écrire un texte directement :",
+          `• ${ctx.prefix}statusgc Bonjour le groupe`,
+          `• ${ctx.prefix}statusgc Bonjour le groupe | bleu`,
+          "",
+          "Couleurs : vert, bleu, rouge, jaune, orange, violet, noir, blanc, rose, cyan, or.",
+          "Réservé aux admins du groupe (le bot doit être admin).",
+        ].join("\n"),
+      });
+    }
+
+    if (text.length > 600) text = text.slice(0, 600);
+
+    await postGroupStatus(ctx.natsu, ctx.jid, {
+      kind: "text",
+      text,
+      color: colorArg || undefined,
+    });
+    try { await ctx.natsu.sendMessage(ctx.jid, { react: { text: "✅", key: ctx.m.key } }); } catch {}
+    return ctx.reply({ text: `✅ Statut publié dans le groupe :\n\n${text}` }).catch(() => {});
+  } catch (error) {
+    console.error("statusgc error:", error?.message);
+    try { await ctx.natsu.sendMessage(ctx.jid, { react: { text: "❌", key: ctx.m.key } }); } catch {}
+    return ctx.reply({
+      text: [
+        "❌ Impossible de publier le statut.",
+        `Raison : ${error?.message || "inconnue"}`,
+        "",
+        "Vérifie que le bot est *admin* du groupe et que le compte est bien connecté.",
+      ].join("\n"),
+    }).catch(() => {});
+  }
+}, "GROUP", "Publier un statut de groupe (photo, vidéo ou texte)");
 
 reg(["hijack"], (ctx) => ctx.reply({ text: "💞 hijack — disabled for your safety (anti-ban)." }), "GROUP", "Hijack (stub)");
 
