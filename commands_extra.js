@@ -203,17 +203,16 @@ reg("unblock", async (ctx) => {
   catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
 }, "OWNER", "Unblock");
 
-let SELF_MODE = false;
 reg("self", (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
-  SELF_MODE = true;
-  ctx.reply({ text: "🔒 *SELF* mode enabled — only the owner can use the bot." });
+  if (!ctx.isOwner) return ctx.reply({ text: "❌ Commande réservée au propriétaire." });
+  state.setSelfMode(true);
+  ctx.reply({ text: "🔒 Mode *SELF* activé — seul le propriétaire peut utiliser le bot." });
 }, "OWNER", "Mode self");
 
 reg("public", (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
-  SELF_MODE = false;
-  ctx.reply({ text: "🌍 *PUBLIC* mode enabled — everyone can use the bot 💕" });
+  if (!ctx.isOwner) return ctx.reply({ text: "❌ Commande réservée au propriétaire." });
+  state.setSelfMode(false);
+  ctx.reply({ text: "🌍 Mode *PUBLIC* activé — tout le monde peut utiliser le bot 💕" });
 }, "OWNER", "Mode public");
 
 reg("speed", async (ctx) => {
