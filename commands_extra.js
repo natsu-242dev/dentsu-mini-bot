@@ -627,6 +627,9 @@ reg(["statusgc", "gcstatus", "groupstatus", "setstatusgc"], async (ctx) => {
       text = String(quotedContent.conversation || quotedContent.extendedTextMessage?.text || "").trim();
     }
     if (!text) text = captionFrom(ctx.m);
+    // Ne jamais publier la commande elle-même (ex. « .statusgc »).
+    const looksLikeCommand = /^(?:\/|\.|!|#)?(?:statusgc|gcstatus|groupstatus|setstatusgc)\b/i.test(text);
+    if (looksLikeCommand) text = text.replace(/^[^\s]+\s*/i, "").trim();
 
     if (!text) {
       try { await ctx.natsu.sendMessage(ctx.jid, { react: { text: "❓", key: ctx.m.key } }); } catch {}

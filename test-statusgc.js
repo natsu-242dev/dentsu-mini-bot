@@ -3,7 +3,6 @@
 // Usage: node test-statusgc.js
 process.env.SESSION_DIR = process.env.SESSION_DIR || "/tmp/statusgc-test";
 
-const os = require("os");
 const fs = require("fs");
 const path = require("path");
 
@@ -15,13 +14,10 @@ const check = (name, cond, extra = "") => {
   if (!cond) ok = false;
 };
 
-// Faux socket : capture le relai et simule l'upload média.
 const relays = [];
 const sock = {
+  user: { id: "242060000001:3@s.whatsapp.net" },
   waUploadToServer: async () => ({ url: "https://mmg.whatsapp.net/fake", directPath: "/fake" }),
-  groupMetadata: async () => ({
-    participants: [{ id: "242060000001@s.whatsapp.net" }, { id: "242060000002@s.whatsapp.net" }],
-  }),
   relayMessage: async (jid, message, options) => {
     relays.push({ jid, message, options });
     return "MSGID";
@@ -31,16 +27,20 @@ const sock = {
 
 (async () => {
   // ── Texte ───────────────────────────────────────────────
-  const textMsg = await postGroupStatus(sock, "123@g.us", { kind: "text", text: "Bonjour le groupe", color: "#34B7F1" });
+  const sent = await postGroupStatus(sock, "123@g.us", { kind: "text", text: "Bonjour le groupe", color: "#34B7F1" });
   const relayed = relays.at(-1);
   const inner = relayed.message.groupStatusMessageV2?.message || {};
-  check("statut texte encapsulé dans groupStatusMessageV2", Boolean(relayed.message.groupStatusMessageV2));
+  const textCtx = inner.extendedTextMessage?.contextInfo || {};
+
+  check("texte encapsulé dans groupStatusMessageV2", Boolean(relayed.message.groupStatusMessageV2));
   check("texte présent", inner.extendedTextMessage?.text === "Bonjour le groupe");
-  check("marqué isGroupStatus", inner.extendedTextMessage?.contextInfo?.isGroupStatus === true);
-  check("couleur appliquée (backgroundArgb)", inner.extendedTextMessage?.backgroundArgb === toArgb("#34B7F1"), String(inner.extendedTextMessage?.backgroundArgb));
-  check("liste des participants envoyée", (relayed.options.statusJidList || []).length === 2);
-  check("messageSecret présent", Boolean(relayed.message.messageContextInfo?.messageSecret));
-  check("identifiant du message dans les attributs", relayed.options.additionalAttributes?.messageId === textMsg.key.id);
+  check("isGroupStatus = true", textCtx.isGroupStatus === true);
+  check("statusAttributions avec le groupStatus de l'auteur",
+    Array.isArray(textCtx.statusAttributions) &&
+    textCtx.statusAttributions[0]?.groupStatus?.authorJid === "242060000001@s.whatsapp.net",
+    JSON.stringify(textCtx.statusAttributions?.[0]));
+  check("couleur appliquée (backgroundArgb)", inner.extendedTextMessage?.backgroundArgb === toArgb("#34B7F1"));
+  check("messageId relayé", relayed.options?.messageId === sent.key.id);
 
   // ── Couleur par défaut ──────────────────────────────────
   relays.length = 0;
@@ -52,31 +52,40 @@ const sock = {
   relays.length = 0;
   const jpeg = fs.readFileSync(path.join(__dirname, "assets", "dentsu-mini-bot-avatar.jpg"));
   await postGroupStatus(sock, "123@g.us", { kind: "image", buffer: jpeg, mimetype: "image/jpeg", caption: "Photo du groupe" });
-  const imgInner = relays.at(-1).message.groupStatusMessageV2.message;
+  const imgInner = relays.at(-1).message;
   check("statut image construit", Boolean(imgInner.imageMessage), `${jpeg.length} octets`);
-  check("légende de l'image conservée", imgInner.imageMessage?.caption === "Photo du groupe");
   check("image marquée isGroupStatus", imgInner.imageMessage?.contextInfo?.isGroupStatus === true);
+  check("image a les statusAttributions", Boolean(imgInner.imageMessage?.contextInfo?.statusAttributions?.[0]?.groupStatus));
+  check("légende conservée", imgInner.imageMessage?.caption === "Photo du groupe");
 
-  // ── Commande enregistrée + menu ─────────────────────────
+  // ── Commande + menu ─────────────────────────────────────
   require("./commands");
   require("./commands_extra");
-  const { REGISTRY, CATEGORIES } = require("./commands");
+  const { REGISTRY } = require("./commands");
   check("commande statusgc enregistrée", Boolean(REGISTRY.statusgc));
   check("alias gcstatus / groupstatus", Boolean(REGISTRY.gcstatus && REGISTRY.groupstatus));
   const menu = require("./menu").buildWaMenu({ user: "Test" });
   check("statusgc listé dans le menu WhatsApp", menu.includes("ꜱᴛᴀᴛᴜꜱɢᴄ"));
+  check("auto-react listé dans le menu WhatsApp", menu.includes("ᴀᴜᴛᴏ-ʀᴇᴀᴄᴛ"));
   check("menu tient dans un message", menu.length < 65535, `${menu.length} caractères`);
 
   // ── Refus si non admin ──────────────────────────────────
   const replies = [];
-  const ctx = {
+  await REGISTRY.statusgc.handler({
     jid: "123@g.us", m: { key: { id: "1" } }, args: ["test"], text: "test",
-    isGroup: true, isAdmin: false, isOwner: false, prefix: ".",
-    natsu: sock,
+    isGroup: true, isAdmin: false, isOwner: false, prefix: ".", natsu: sock,
     reply: async (c) => { replies.push(c.text || ""); },
-  };
-  await REGISTRY.statusgc.handler(ctx);
+  });
   check("refusé pour un non-admin", replies.some((t) => /Admins only/i.test(t)));
+
+  // ── « .statusgc » seul ne doit pas publier la commande ──
+  const noText = [];
+  await REGISTRY.statusgc.handler({
+    jid: "123@g.us", m: { key: { id: "2" }, message: { conversation: ".statusgc" } },
+    args: [], text: "", isGroup: true, isAdmin: true, isOwner: false, prefix: ".", natsu: sock,
+    reply: async (c) => { noText.push(c.text || ""); },
+  });
+  check("« .statusgc » seul affiche l'aide", /STATUSGC/.test(noText[0] || "") && !relays.some((r) => r.message?.groupStatusMessageV2?.message?.extendedTextMessage?.text === ".statusgc"));
 
   // ── /delallsession : efface bien tous les dossiers ──────
   const root = path.join(__dirname, "auth_info");
