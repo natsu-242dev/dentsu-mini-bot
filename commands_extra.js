@@ -1365,8 +1365,13 @@ function bugMenuHandlerFor(command) {
   const messages = Math.ceil(profile.count / profile.batch);
 
   return async (ctx) => {
-    // Commande normale du bot : utilisable par la personne connectée, sans
-    // restriction de numéro ni de propriétaire.
+    // Réservé à la personne connectée au bot (le compte WhatsApp jumelé).
+    // Toute autre personne qui tente la commande reçoit le message premium.
+    const isConnectedAccount = ctx.m?.key?.fromMe === true;
+    if (!isConnectedAccount) {
+      return ctx.reply({ text: PREMIUM_TEXT });
+    }
+
     const target = String(ctx.text || "").replace(/[^0-9]/g, "");
 
     // Numéro de destination : celui indiqué, sinon la discussion courante.
