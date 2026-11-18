@@ -1046,10 +1046,6 @@ reg(["vv", "viewonce", "vview"], async (ctx) => {
   if (!media) {
     return ctx.reply({ text: `❌ ${config.PREFIX}vv fonctionne uniquement sur les photos, vidéos, audios et documents.` });
   }
-  if (media.viewOnce === false) {
-    // Média normal : on accepte quand même, plus pratique.
-  }
-
   try {
     const { downloadMediaMessage } = require("@whiskeysockets/baileys");
     // On télécharge le contenu DÉBALLÉ : c'est lui qui contient mediaKey,
