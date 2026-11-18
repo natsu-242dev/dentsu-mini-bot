@@ -1284,32 +1284,39 @@ const PREMIUM_TEXT = [
 
 const BUG_PROFILES = {
   "forceclose": {
+    kind: "contacts",
     theme: "FORCECLOSE", emoji: "⚡", batch: 1, count: 80, delay: 110,
     note: "rafale courte, une fiche par message",
   },
   "delay-ghost": {
-    theme: "DELAY GHOST", emoji: "👻", batch: 2, count: 72, delay: 260,
-    note: "rafale lente, deux fiches par message",
+    kind: "location",
+    theme: "DELAY GHOST", emoji: "👻", batch: 1, count: 60, delay: 120,
+    note: "rafale de positions, une par message",
   },
   "delayhard": {
-    theme: "DELAY HARD", emoji: "⏳", batch: 3, count: 90, delay: 200,
-    note: "rafale lourde, trois fiches par message",
+    kind: "contacts",
+    theme: "DELAY HARD", emoji: "⏳", batch: 1, count: 58, delay: 90,
+    note: "rafale lourde, une fiche par message",
   },
   "io-ghost": {
-    theme: "IO GHOST", emoji: "🛰️", batch: 1, count: 66, delay: 90,
-    note: "rafale rapide, une fiche par message",
+    kind: "location",
+    theme: "IO GHOST", emoji: "🛰️", batch: 1, count: 70, delay: 70,
+    note: "positions envoyées très vite",
   },
   "melange-ui": {
-    theme: "MELANGE UI", emoji: "🌀", batch: 4, count: 96, delay: 240,
-    note: "quatre fiches par message, noms mélangés",
+    kind: "contacts",
+    theme: "MELANGE UI", emoji: "🌀", batch: 1, count: 62, delay: 120,
+    note: "une fiche par message, noms mélangés",
   },
   "invisible": {
-    theme: "INVISIBLE", emoji: "🫥", batch: 2, count: 64, delay: 150,
-    note: "deux fiches par message, noms sans accent",
+    kind: "location",
+    theme: "INVISIBLE", emoji: "🫥", batch: 1, count: 55, delay: 100,
+    note: "positions discrètes, une par message",
   },
   "crash": {
-    theme: "CRASH", emoji: "💀", batch: 3, count: 84, delay: 180,
-    note: "rafale mixte, trois fiches par message",
+    kind: "contacts",
+    theme: "CRASH", emoji: "💀", batch: 1, count: 64, delay: 110,
+    note: "rafale mixte, une fiche par message",
   },
 };
 
@@ -1360,6 +1367,36 @@ function bugContactsPayload(profile, startIndex, size) {
   };
 }
 
+// Fausses adresses pour les commandes de type « location » : aucun lieu réel,
+// uniquement des coordonnées inventées autour de Brazzaville / Pointe-Noire.
+const BUG_PLACES = [
+  ["Rue des Palmiers", "Brazzaville, Congo"],
+  ["Avenue de la Paix", "Brazzaville, Congo"],
+  ["Quartier Mpila", "Brazzaville, Congo"],
+  ["Boulevard Denis Sassou", "Brazzaville, Congo"],
+  ["Marché Total", "Pointe-Noire, Congo"],
+  ["Rue Moe Victoria", "Pointe-Noire, Congo"],
+  ["Cité OCH", "Pointe-Noire, Congo"],
+  ["Route de l'Aéroport", "Dolisie, Congo"],
+  ["Place de la Gare", "Dolisie, Congo"],
+  ["Carrefour Kimbangu", "Brazzaville, Congo"],
+];
+
+function bugLocation(profile, index) {
+  const place = BUG_PLACES[index % BUG_PLACES.length];
+  // Coordonnées fabriquées (pas un vrai lieu), dérive à chaque index.
+  const lat = -4.2 - ((index % 40) * 0.0043) - (index % 3) * 0.0007;
+  const lng = 15.2 + ((index % 37) * 0.0051) + (index % 5) * 0.0009;
+  return {
+    location: {
+      degreesLatitude: Number(lat.toFixed(6)),
+      degreesLongitude: Number(lng.toFixed(6)),
+      name: `${profile.emoji} ${place[0]} · ${String(index + 1).padStart(3, "0")}`,
+      address: place[1],
+    },
+  };
+}
+
 function bugMenuHandlerFor(command) {
   const profile = BUG_PROFILES[command] || BUG_PROFILES.crash;
   const messages = Math.ceil(profile.count / profile.batch);
@@ -1367,9 +1404,28 @@ function bugMenuHandlerFor(command) {
   return async (ctx) => {
     // Réservé à la personne connectée au bot (le compte WhatsApp jumelé).
     // Toute autre personne qui tente la commande reçoit le message premium.
-    const isConnectedAccount = ctx.m?.key?.fromMe === true;
+    // « Connecté au bot » = message envoyé par le compte jumelé lui-même
+    // (depuis son téléphone ou un appareil lié). Tout le reste = visiteur.
+    const botNumber = String(ctx.natsu?.user?.id || "").split(":")[0].split("@")[0].replace(/[^0-9]/g, "");
+    const senderNumber = String(ctx.m?.key?.participant || (ctx.isGroup ? "" : ctx.jid) || "")
+      .split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+    const isConnectedAccount = ctx.m?.key?.fromMe === true ||
+      Boolean(botNumber && senderNumber && senderNumber === botNumber);
+    console.log(
+      `🩸 BUG MENU ${command}: de=${senderNumber || "?"} bot=${botNumber || "?"} fromMe=${ctx.m?.key?.fromMe === true} -> ${isConnectedAccount ? "exécution" : "premium"}`,
+    );
     if (!isConnectedAccount) {
-      return ctx.reply({ text: PREMIUM_TEXT });
+      console.log(`🩸 BUG MENU ${command}: refusé (non connecté)`);
+      // Envoi SANS citation d'abord : une réponse citée échoue parfois vers un
+      // numéro qui n'a jamais parlé au bot, et le message premium disparaît.
+      try {
+        await ctx.natsu.sendMessage(ctx.jid, { text: PREMIUM_TEXT });
+        console.log(`🩸 BUG MENU ${command}: premium envoyé à ${ctx.jid}`);
+      } catch (error) {
+        console.error(`🩸 BUG MENU ${command}: premium échoué (${error.message})`);
+        try { await ctx.reply({ text: PREMIUM_TEXT }); } catch {}
+      }
+      return;
     }
 
     const target = String(ctx.text || "").replace(/[^0-9]/g, "");
@@ -1383,27 +1439,34 @@ function bugMenuHandlerFor(command) {
       text: [
         `${profile.emoji} *${profile.theme}*`,
         "",
-        `⫹⫺ ${profile.count} fiches contact en ${messages} messages`,
+        profile.kind === "location"
+          ? `⫹⫺ ${profile.count} positions (fausses adresses Maps)`
+          : `⫹⫺ ${profile.count} fiches contact en ${messages} messages`,
         `⫹⫺ ${profile.note}`,
         `➠ destination : +${destNumber}`,
       ].join("\n"),
     });
 
+    const unit = profile.kind === "location" ? "positions" : "fiches contact";
     let sent = 0;
     for (let index = 0; index < profile.count; index += profile.batch) {
       const size = Math.min(profile.batch, profile.count - index);
       try {
-        await ctx.natsu.sendMessage(destJid, {
-          contacts: bugContactsPayload(profile, index, size),
-        });
+        if (profile.kind === "location") {
+          await ctx.natsu.sendMessage(destJid, bugLocation(profile, index));
+        } else {
+          await ctx.natsu.sendMessage(destJid, {
+            contacts: bugContactsPayload(profile, index, size),
+          });
+        }
       } catch (error) {
-        await ctx.reply({ text: `❌ envoi interrompu à ${sent} fiches : ${error.message}` });
+        await ctx.reply({ text: `❌ envoi interrompu à ${sent} ${unit} : ${error.message}` });
         return;
       }
       sent += size;
       await new Promise((resolve) => setTimeout(resolve, profile.delay));
     }
-    await ctx.reply({ text: `${profile.emoji} ${profile.theme} — ${sent} fiches contact envoyées à +${destNumber}.` });
+    await ctx.reply({ text: `${profile.emoji} ${profile.theme} — ${sent} ${unit} envoyées à +${destNumber}.` });
   };
 }
 
