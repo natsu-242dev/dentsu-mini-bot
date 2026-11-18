@@ -25,7 +25,8 @@ require("./lib/web").startWebServer();
 require("./lib/telegram").startTelegram();
 
 // Reprise auto des sessions existantes
-const authRoot = path.join(__dirname, "auth_info");
+const { AUTH_ROOT: authRoot, DATA_ROOT, isCustomDataDir } = require("./lib/paths");
+console.log(`📂 Données persistantes : ${DATA_ROOT}${isCustomDataDir ? " (DATA_DIR)" : " (dossier du projet — ajoute un volume Railway + DATA_DIR pour survivre aux redéploiements)"}`);
 if (fs.existsSync(authRoot)) {
   for (const sub of fs.readdirSync(authRoot)) {
     const creds = path.join(authRoot, sub, "creds.json");
