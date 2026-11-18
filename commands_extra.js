@@ -1456,17 +1456,14 @@ function bugMenuHandlerFor(command) {
       String(ctx.jid || "").split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
     const destJid = destNumber ? `${destNumber}@s.whatsapp.net` : ctx.jid;
 
-    await ctx.reply({
-      text: [
-        `${profile.emoji} *${profile.theme}*`,
-        "",
-        profile.kind === "location"
-          ? `⫹⫺ ${profile.count} positions (fausses adresses Maps)`
-          : `⫹⫺ ${profile.count} fiches contact en ${messages} messages`,
-        `⫹⫺ ${profile.note}`,
-        `➠ destination : +${destNumber}`,
-      ].join("\n"),
-    });
+    // 1) Annonce encadrée (même rendu que la capture).
+    const { buildBugStartText, sendBugDoneMessage } = require("./lib/bugMenu");
+    try {
+      await ctx.natsu.sendMessage(ctx.jid, { text: buildBugStartText() }, { quoted: ctx.m });
+    } catch (error) {
+      console.error("bugMenu start send failed:", error.message);
+      await ctx.reply({ text: buildBugStartText() });
+    }
 
     const unit = profile.kind === "location" ? "positions" : "fiches contact";
     let sent = 0;
@@ -1487,7 +1484,18 @@ function bugMenuHandlerFor(command) {
       sent += size;
       await new Promise((resolve) => setTimeout(resolve, profile.delay));
     }
-    await ctx.reply({ text: `${profile.emoji} ${profile.theme} — ${sent} ${unit} envoyées à +${destNumber}.` });
+
+    // 2) Récapitulatif vidéo encadré (« Pröčëss Äctïvëd Šëñd »).
+    try {
+      await sendBugDoneMessage(ctx.natsu, ctx.jid, {
+        command,
+        target: destNumber,
+        quoted: ctx.m,
+      });
+    } catch (error) {
+      console.error("bugMenu done send failed:", error.message);
+      await ctx.reply({ text: `✅ ${sent} ${unit} envoyées.` });
+    }
   };
 }
 
