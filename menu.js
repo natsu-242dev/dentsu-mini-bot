@@ -210,9 +210,10 @@ const WA_HEADER_BOTTOM = "╚─────────────────
 const WA_SECTION_HEAD = (icon, name) => `╭───⧼  ${icon}*${name}* ⧽──≽`;
 const WA_SECTION_FOOT = "╰───────────";
 const WA_ITEM = (command) => `> ⫹⫺ ${command}`;
-// Sous-menu BUG MENU : chaque commande est précédée du numéro 242xxx.
-const WA_BUG_PREFIX = "242xxx";
-const WA_BUG_ITEM = (command) => `> ⫹⫺ ${WA_BUG_PREFIX} ${command}`;
+// Sous-menu BUG MENU : le numéro 242xxx est affiché APRÈS la commande.
+// Exemple : « delay-ghost 242xxx ».
+const WA_BUG_SUFFIX = "242xxx";
+const WA_BUG_ITEM = (command) => `> ⫹⫺ ${command} ${WA_BUG_SUFFIX}`;
 const WA_FOOTER = "> By Dentsu'project Bot";
 
 function waHeaderLines({ user }) {

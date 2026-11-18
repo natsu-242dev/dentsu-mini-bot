@@ -1275,14 +1275,66 @@ const PREMIUM_TEXT = [
   "└ ❏",
 ].join("\n");
 
-async function premiumOnlyHandler(ctx) {
-  await ctx.reply({ text: PREMIUM_TEXT });
+// ── 🩸 BUG MENU ─────────────────────────────────────────────────
+// Simulation inoffensive : on envoie des fiches contact (vCard) dans la
+// discussion de la personne qui lance la commande. Aucun contenu destiné à
+// faire planter l'application d'un tiers, aucun envoi vers un autre numéro.
+const BUG_CONTACT_COUNT = 50;
+
+function bugVCard(index) {
+  const name = `Dentsu Bug ${String(index + 1).padStart(2, "0")}`;
+  const vcard = [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `FN:${name}`,
+    `N:${name};;;;`,
+    "TEL;type=CELL;type=VOICE;waid=242000000000:+242 00 00 00 00",
+    "END:VCARD",
+  ].join("\n");
+  return { displayName: name, contacts: [{ vcard }] };
 }
+
+async function bugMenuHandler(ctx) {
+  const target = String(ctx.text || "").replace(/[^0-9]/g, "");
+  const selfRaw = ctx.m?.key?.participant || ctx.jid || "";
+  const selfNumber = String(selfRaw).split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+
+  // Le numéro demandé doit être celui de l'expéditeur : pas d'envoi massif
+  // vers le téléphone de quelqu'un d'autre.
+  if (target && selfNumber && !selfNumber.endsWith(target) && !target.endsWith(selfNumber.slice(-target.length || 1))) {
+    return ctx.reply({
+      text: [
+        "🩸 *BUG MENU*",
+        "",
+        "Cette simulation n'envoie des contacts qu'à *toi-même*.",
+        `➠ ton numéro : ${selfNumber || "inconnu"}`,
+        `➠ exemple : ${config.PREFIX}forceclose ${selfNumber || "242xxxxxx"}`,
+      ].join("\n"),
+    });
+  }
+
+  await ctx.reply({
+    text: `🩸 *BUG MENU*\n\n⫹⫺ envoi de ${BUG_CONTACT_COUNT} fiches contact…\n➠ aucune action sur un autre téléphone`,
+  });
+
+  // Envoi séquentiel, avec une petite pause pour ne pas saturer la session.
+  for (let index = 0; index < BUG_CONTACT_COUNT; index += 1) {
+    try {
+      await ctx.natsu.sendMessage(ctx.jid, { contacts: bugVCard(index) });
+    } catch (error) {
+      await ctx.reply({ text: `❌ envoi interrompu à ${index + 1} : ${error.message}` });
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  await ctx.reply({ text: `✅ ${BUG_CONTACT_COUNT} contacts envoyés dans cette discussion.` });
+}
+
 reg(
   ["delay-ghost", "forceclose", "delayhard", "io-ghost", "melange-ui", "crash"],
-  premiumOnlyHandler,
+  bugMenuHandler,
   "CRASH",
-  "Commande premium (simulation, aucune action)",
+  "Simulation BUG MENU (50 fiches contact sur ton propre numéro)",
 );
 
 
