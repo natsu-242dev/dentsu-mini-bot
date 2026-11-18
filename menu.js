@@ -125,7 +125,16 @@ function mergedSections() {
   let CATS = {};
   let REG = {};
   try { CATS = require("./commands").CATEGORIES || {}; REG = require("./commands").REGISTRY || {}; } catch {}
-  try { require("./commands_extra"); CATS = require("./commands").CATEGORIES || CATS; REG = require("./commands").REGISTRY || REG; } catch {}
+  // Si commands_extra ne se charge pas (dépendance manquante, erreur de
+  // syntaxe…), le menu perdrait silencieusement des centaines de commandes :
+  // on log l'erreur pour la voir dans les logs Railway.
+  try {
+    require("./commands_extra");
+    CATS = require("./commands").CATEGORIES || CATS;
+    REG = require("./commands").REGISTRY || REG;
+  } catch (error) {
+    console.error("menu: commands_extra failed to load —", error.message);
+  }
   const BUILTIN = new Set(["menu","help","list","bugmenu","bug","bugreport","report","ping","alive","runtime","uptime","infobot","owner","weather","translate","lyrics"]);
   const ffmpegReady = () => {
     try { return spawnSync("ffmpeg", ["-version"], { stdio: "ignore", timeout: 2000 }).status === 0; }
