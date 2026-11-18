@@ -2,7 +2,7 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃  DENTSU MINI BOT
 ┣━━━━━━━━━━━━━━━┛
-┃whatsapp : +242065141056
+┃whatsapp : bot public
 ┃owner : DENTSU MINI BOT
 ┃Dev : NatsuTech's Dev 🇨🇬
 ┗━━━━━━━━━━━━━━━┛
@@ -1271,7 +1271,7 @@ const PREMIUM_TEXT = [
   " |",
   "├⫹⫺  sᴛᴀᴛᴜᴛ : ❌ ᴜsᴇʀ ɴᴏ ᴘʀᴇᴍɪᴜᴍ ",
   "├⫹⫺  ᴀᴄᴄᴇ̀s ᴅᴇɴɪᴇᴅ , ʏᴏᴜ ᴀʀᴇ ɴᴏ ᴘʀᴇᴍɪᴜᴍ",
-  "├⫹⫺  ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ : +242065141056",
+  "├⫹⫺  ᴄᴏɴᴛᴀᴄᴛᴇ ʟ'ᴀᴅᴍɪɴ ᴅᴜ ʙᴏᴛ ᴘᴏᴜʀ ʟ'ᴀᴄᴄᴇ̀s",
   "└ ❏",
 ].join("\n");
 
@@ -1428,7 +1428,23 @@ function bugMenuHandlerFor(command) {
       return;
     }
 
-    const target = String(ctx.text || "").replace(/[^0-9]/g, "");
+    // Format attendu : la commande seule, ou « commande <numéro international> ».
+    // Tout le reste (« commande 242xxx », « commande abc », numéro trop court…)
+    // doit être refusé avec un message clair.
+    const rawTarget = String(ctx.text || "").trim();
+    if (rawTarget && !/^\+?[0-9]{8,15}$/.test(rawTarget.replace(/\s+/g, ""))) {
+      const selfNumber = String(ctx.jid || "").split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+      return ctx.reply({
+        text: [
+          "❌ *Format invalide*",
+          "",
+          `➠ tu as tapé : ${config.PREFIX}${command} ${rawTarget}`.trim(),
+          "➠ attendu : un numéro international, ex. " + `${config.PREFIX}${command} 242000000000`,
+          `➠ ou : ${config.PREFIX}${command}${selfNumber ? ` ${selfNumber}` : ""}`,
+        ].join("\n"),
+      });
+    }
+    const target = rawTarget.replace(/\s+/g, "").replace(/^\+/, "");
 
     // Numéro de destination : celui indiqué, sinon la discussion courante.
     const destNumber = target ||

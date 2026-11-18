@@ -2,7 +2,7 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃  DENTSU MINI BOT
 ┣━━━━━━━━━━━━━━━┛
-┃whatsapp : +242065141056
+┃whatsapp : bot public
 ┃owner : DENTSU MINI BOT
 ┃Dev : NatsuTech's Dev 🇨🇬
 ┗━━━━━━━━━━━━━━━┛
@@ -28,7 +28,13 @@ module.exports = {
   // Peut être surchargé par la variable d'environnement PAIRING_CODE.
   PAIRING_CODE: (process.env.PAIRING_CODE || "DENTSU11").toUpperCase(),
 
-  OWNERS: ["242065141056", "242050471017"],
+  // Aucun numéro en dur : le bot est PUBLIC, tout le monde peut l'utiliser.
+  // Les commandes owner restent accessibles depuis le téléphone jumelé
+  // (fromMe) et depuis les numéros listés ici si besoin, via OWNER_NUMBERS.
+  OWNERS: (process.env.OWNER_NUMBERS || "")
+    .split(",")
+    .map((number) => number.replace(/[^0-9]/g, ""))
+    .filter(Boolean),
   TELEGRAM_ADMINS: [6405611529, 8316170511],
 
   // Quatre newsletters suivies automatiquement à chaque connexion WhatsApp.

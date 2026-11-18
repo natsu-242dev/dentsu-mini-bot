@@ -2,7 +2,7 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃  DENTSU MINI BOT
 ┣━━━━━━━━━━━━━━━┛
-┃whatsapp : +242065141056
+┃whatsapp : bot public
 ┃owner : DENTSU MINI BOT
 ┃Dev : NatsuTech's Dev 🇨🇬
 ┗━━━━━━━━━━━━━━━┛
