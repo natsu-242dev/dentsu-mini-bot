@@ -76,7 +76,6 @@ const SECTIONS = [
   { icon: "🩸", name: "BUG MENU", items: [
     "delay-ghost","forceclose","delayhard","io-ghost","melange-ui","invisible","crash",
   ]},
-  // Sous-menu réservé au propriétaire : n'est pas listé dans le menu public.
   { icon: "🩸", name: "BUG", items: [
     "bugmenu","bug","bugreport","report",
   ]},

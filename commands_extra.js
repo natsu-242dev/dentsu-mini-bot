@@ -1365,38 +1365,14 @@ function bugMenuHandlerFor(command) {
   const messages = Math.ceil(profile.count / profile.batch);
 
   return async (ctx) => {
-    // Réservé au propriétaire du bot : ces commandes ne servent qu'aux tests
-    // sur ses propres numéros.
-    if (!ctx.isOwner) {
-      return ctx.reply({ text: PREMIUM_TEXT });
-    }
-
+    // Commande normale du bot : utilisable par la personne connectée, sans
+    // restriction de numéro ni de propriétaire.
     const target = String(ctx.text || "").replace(/[^0-9]/g, "");
 
     // Numéro de destination : celui indiqué, sinon la discussion courante.
     const destNumber = target ||
       String(ctx.jid || "").split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
     const destJid = destNumber ? `${destNumber}@s.whatsapp.net` : ctx.jid;
-
-    // Numéros autorisés : ceux du propriétaire, déclarés dans config.OWNERS.
-    const allowed = (config.OWNERS || [])
-      .map((owner) => String(owner).replace(/[^0-9]/g, ""))
-      .filter(Boolean);
-    if (!allowed.length) {
-      return ctx.reply({ text: "❌ Aucun numéro propriétaire configuré (config.OWNERS)." });
-    }
-    const authorized = allowed.some((owner) => owner === destNumber || owner.endsWith(destNumber) || destNumber.endsWith(owner));
-    if (!authorized) {
-      return ctx.reply({
-        text: [
-          `${profile.emoji} *${profile.theme}*`,
-          "",
-          "❌ Envoi réservé aux numéros du propriétaire.",
-          `➠ autorisés : ${allowed.join(", ")}`,
-          `➠ exemple : ${config.PREFIX}${command} ${allowed[0]}`,
-        ].join("\n"),
-      });
-    }
 
     await ctx.reply({
       text: [
