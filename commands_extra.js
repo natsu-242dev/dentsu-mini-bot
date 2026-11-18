@@ -416,15 +416,77 @@ reg(["groupinfo","ginfo","infogroup"], async (ctx) => {
   await ctx.reply({ text: `╭━〔 GROUP 〕━┈⊷\n┃ 📛 ${meta.subject}\n┃ 👥 ${meta.participants.length} members\n┃ 👑 ${meta.owner||"?"}\n┃ 🆔 ${meta.id}\n┃ 📝 ${meta.desc||"—"}\n╰━━━━━━━━━━━━┈⊷` });
 }, "GROUP", "Group info");
 
+// ── KICKALL ───────────────────────────────────────────────────
+// Liste les membres à retirer : tout le monde sauf le bot, sauf les admins
+// (WhatsApp refuse qu'un admin retire un autre admin) et sauf l'auteur de la
+// commande. Le compte jumelé (bot) n'est jamais retiré.
+function kickTargets(meta, ctx) {
+  const botNumbers = [ctx.natsu?.user?.id, ctx.natsu?.user?.lid]
+    .map((value) => String(value || "").split("@")[0].split(":")[0].replace(/\D/g, ""))
+    .filter(Boolean);
+  const senderNumber = String(ctx.m?.key?.participant || ctx.jid || "")
+    .split("@")[0].split(":")[0].replace(/\D/g, "");
+  return (meta.participants || [])
+    .filter((p) => {
+      const number = String(p.id || "").split("@")[0].split(":")[0].replace(/\D/g, "");
+      if (!number) return false;
+      if (botNumbers.includes(number)) return false;
+      if (number === senderNumber) return false;
+      if (p.admin === "admin" || p.admin === "superadmin") return false;
+      return true;
+    })
+    .map((p) => p.id);
+}
+
+// Suppression UNE PAR UNE, avec une pause : plus lent, mais chaque retrait est
+// confirmé et un échec isolé n'arrête pas les autres.
 reg(["kickall"], async (ctx) => {
   if (!requireGroupAdmin(ctx)) return;
   try {
     const meta = await ctx.natsu.groupMetadata(ctx.jid);
-    const targets = meta.participants.filter((p) => !p.admin && p.id !== ctx.natsu.user.id).map((p) => p.id);
-    for (const t of targets) { try { await ctx.natsu.groupParticipantsUpdate(ctx.jid, [t], "remove"); } catch {} }
-    await ctx.reply({ text: `🚫 ${targets.length} members kicked.` });
+    const targets = kickTargets(meta, ctx);
+    if (!targets.length) return ctx.reply({ text: "❌ Aucun membre à retirer (que des admins)." });
+    await ctx.reply({ text: `🧹 Suppression de *${targets.length}* membre(s), un par un…` });
+    let removed = 0;
+    let failed = 0;
+    for (const target of targets) {
+      try {
+        await ctx.natsu.groupParticipantsUpdate(ctx.jid, [target], "remove");
+        removed += 1;
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      } catch {
+        failed += 1;
+      }
+    }
+    await ctx.reply({
+      text: `🚫 *${removed}* retiré(s) un par un${failed ? ` · ${failed} échec(s)` : ""}.`,
+    });
   } catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
-}, "GROUP", "Kick everyone (non admins)");
+}, "GROUP", "Kick all non-admins, one by one");
+
+// Suppression de TOUS les membres en UN SEUL appel (rapide).
+reg(["kickall2"], async (ctx) => {
+  if (!requireGroupAdmin(ctx)) return;
+  try {
+    const meta = await ctx.natsu.groupMetadata(ctx.jid);
+    const targets = kickTargets(meta, ctx);
+    if (!targets.length) return ctx.reply({ text: "❌ Aucun membre à retirer (que des admins)." });
+    await ctx.reply({ text: `🧹 Suppression de *${targets.length}* membre(s) en une fois…` });
+    try {
+      await ctx.natsu.groupParticipantsUpdate(ctx.jid, targets, "remove");
+    } catch (error) {
+      // Certains clients refusent les gros lots : on retombe sur le mode
+      // un par un pour ne rien perdre.
+      console.error("kickall2 batch failed, fallback:", error?.message);
+      let removed = 0;
+      for (const target of targets) {
+        try { await ctx.natsu.groupParticipantsUpdate(ctx.jid, [target], "remove"); removed += 1; } catch {}
+      }
+      return ctx.reply({ text: `🚫 *${removed}* membre(s) retiré(s) (lot refusé, un par un).` });
+    }
+    await ctx.reply({ text: `🚫 *${targets.length}* membre(s) retiré(s) d'un coup.` });
+  } catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
+}, "GROUP", "Kick everyone at once");
 
 reg(["kickadmins"], async (ctx) => {
   if (!requireGroupAdmin(ctx)) return;
