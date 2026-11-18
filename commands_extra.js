@@ -213,17 +213,11 @@ reg("unblock", async (ctx) => {
   catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
 }, "OWNER", "Unblock");
 
-reg("self", (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Commande réservée au propriétaire." });
-  state.setSelfMode(true);
-  ctx.reply({ text: "🔒 Mode *SELF* activé — seul le propriétaire peut utiliser le bot." });
-}, "OWNER", "Mode self");
-
-reg("public", (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Commande réservée au propriétaire." });
-  state.setSelfMode(false);
-  ctx.reply({ text: "🌍 Mode *PUBLIC* activé — tout le monde peut utiliser le bot 💕" });
-}, "OWNER", "Mode public");
+// `self` / `public` : plus de bascule de mode. Le bot est PUBLIC en
+// permanence ; ces commandes confirment simplement l'état.
+reg(["self", "public"], (ctx) => {
+  ctx.reply({ text: "🌍 Ce bot est *PUBLIC* : tout le monde peut l'utiliser." });
+}, "OWNER", "État du mode (toujours public)");
 
 reg("speed", async (ctx) => {
   const t = Date.now();
