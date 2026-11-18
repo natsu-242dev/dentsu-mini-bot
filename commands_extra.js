@@ -1276,66 +1276,149 @@ const PREMIUM_TEXT = [
 ].join("\n");
 
 // ── 🩸 BUG MENU ─────────────────────────────────────────────────
-// Simulation inoffensive : on envoie des fiches contact (vCard) dans la
-// discussion de la personne qui lance la commande. Aucun contenu destiné à
-// faire planter l'application d'un tiers, aucun envoi vers un autre numéro.
-const BUG_CONTACT_COUNT = 50;
+// Simulation inoffensive : chaque commande du sous-menu a sa PROPRE signature
+// de payload (thème, nom des fiches, nombre d'envois, contacts par message).
+// Les envois se font uniquement dans la discussion de la personne qui lance
+// la commande : aucun contenu destiné à faire planter l'app d'un tiers, aucun
+// envoi vers un autre numéro.
 
-function bugVCard(index) {
-  const name = `Dentsu Bug ${String(index + 1).padStart(2, "0")}`;
+const BUG_PROFILES = {
+  "forceclose": {
+    theme: "FORCECLOSE", emoji: "⚡", batch: 1, count: 80, delay: 110,
+    note: "rafale courte, une fiche par message",
+  },
+  "delay-ghost": {
+    theme: "DELAY GHOST", emoji: "👻", batch: 2, count: 72, delay: 260,
+    note: "rafale lente, deux fiches par message",
+  },
+  "delayhard": {
+    theme: "DELAY HARD", emoji: "⏳", batch: 3, count: 90, delay: 200,
+    note: "rafale lourde, trois fiches par message",
+  },
+  "io-ghost": {
+    theme: "IO GHOST", emoji: "🛰️", batch: 1, count: 66, delay: 90,
+    note: "rafale rapide, une fiche par message",
+  },
+  "melange-ui": {
+    theme: "MELANGE UI", emoji: "🌀", batch: 4, count: 96, delay: 240,
+    note: "quatre fiches par message, noms mélangés",
+  },
+  "invisible": {
+    theme: "INVISIBLE", emoji: "🫥", batch: 2, count: 64, delay: 150,
+    note: "deux fiches par message, noms sans accent",
+  },
+  "crash": {
+    theme: "CRASH", emoji: "💀", batch: 3, count: 84, delay: 180,
+    note: "rafale mixte, trois fiches par message",
+  },
+};
+
+// Petits vocabulaires différents par commande : les fiches ne se ressemblent pas.
+const BUG_WORDS = {
+  "FORCECLOSE": ["Stop", "Kill", "Freeze", "Close", "Hang", "Block"],
+  "DELAY GHOST": ["Ghost", "Lag", "Echo", "Fade", "Mist", "Drift"],
+  "DELAY HARD": ["Delay", "Slow", "Late", "Wait", "Hold", "Stuck"],
+  "IO GHOST": ["Input", "Output", "Stream", "Buffer", "Packet", "Socket"],
+  "MELANGE UI": ["Mix", "Blend", "Shuffle", "Twist", "Flux", "Swirl"],
+  "INVISIBLE": ["Hidden", "Empty", "Blank", "Silent", "Shadow", "Void"],
+  "CRASH": ["Crash", "Fault", "Error", "Panic", "Break", "Glitch"],
+};
+
+const BUG_PREFIXES = ["242", "DTS", "BUG", "X24", "NG-", "WA-"];
+
+function bugVCard(profile, index) {
+  const words = BUG_WORDS[profile.theme] || BUG_WORDS.CRASH;
+  const word = words[index % words.length];
+  const number = String(index + 1).padStart(3, "0");
+  const tag = BUG_PREFIXES[index % BUG_PREFIXES.length];
+  const name = `${word} ${tag}${number}`;
+  const phone = `+242 ${String(index).padStart(2, "0")} ${String((index * 7) % 100).padStart(2, "0")} ${String((index * 13) % 100).padStart(2, "0")} ${String((index * 3) % 100).padStart(2, "0")}`;
   const vcard = [
     "BEGIN:VCARD",
     "VERSION:3.0",
     `FN:${name}`,
     `N:${name};;;;`,
-    "TEL;type=CELL;type=VOICE;waid=242000000000:+242 00 00 00 00",
+    `ORG:${profile.theme} · BUG MENU`,
+    `NOTE:${profile.emoji} ${profile.theme} — payload ${number}`,
+    `TEL;type=CELL;type=VOICE;waid=2420${String(index).padStart(8, "0")}:${phone}`,
     "END:VCARD",
   ].join("\n");
   return { displayName: name, contacts: [{ vcard }] };
 }
 
-async function bugMenuHandler(ctx) {
-  const target = String(ctx.text || "").replace(/[^0-9]/g, "");
-  const selfRaw = ctx.m?.key?.participant || ctx.jid || "";
-  const selfNumber = String(selfRaw).split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
-
-  // Le numéro demandé doit être celui de l'expéditeur : pas d'envoi massif
-  // vers le téléphone de quelqu'un d'autre.
-  if (target && selfNumber && !selfNumber.endsWith(target) && !target.endsWith(selfNumber.slice(-target.length || 1))) {
-    return ctx.reply({
-      text: [
-        "🩸 *BUG MENU*",
-        "",
-        "Cette simulation n'envoie des contacts qu'à *toi-même*.",
-        `➠ ton numéro : ${selfNumber || "inconnu"}`,
-        `➠ exemple : ${config.PREFIX}forceclose ${selfNumber || "242xxxxxx"}`,
-      ].join("\n"),
-    });
+function bugContactsPayload(profile, startIndex, size) {
+  const cards = [];
+  for (let offset = 0; offset < size; offset += 1) {
+    cards.push(bugVCard(profile, startIndex + offset));
   }
-
-  await ctx.reply({
-    text: `🩸 *BUG MENU*\n\n⫹⫺ envoi de ${BUG_CONTACT_COUNT} fiches contact…\n➠ aucune action sur un autre téléphone`,
-  });
-
-  // Envoi séquentiel, avec une petite pause pour ne pas saturer la session.
-  for (let index = 0; index < BUG_CONTACT_COUNT; index += 1) {
-    try {
-      await ctx.natsu.sendMessage(ctx.jid, { contacts: bugVCard(index) });
-    } catch (error) {
-      await ctx.reply({ text: `❌ envoi interrompu à ${index + 1} : ${error.message}` });
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 120));
-  }
-  await ctx.reply({ text: `✅ ${BUG_CONTACT_COUNT} contacts envoyés dans cette discussion.` });
+  const displayName = size === 1
+    ? cards[0].displayName
+    : `${profile.emoji} ${profile.theme} ${String(startIndex + 1).padStart(3, "0")}-${String(startIndex + size).padStart(3, "0")}`;
+  return {
+    displayName,
+    contacts: cards.map((card) => ({ vcard: card.contacts[0].vcard })),
+  };
 }
 
-reg(
-  ["delay-ghost", "forceclose", "delayhard", "io-ghost", "melange-ui", "crash"],
-  bugMenuHandler,
-  "CRASH",
-  "Simulation BUG MENU (50 fiches contact sur ton propre numéro)",
-);
+function bugMenuHandlerFor(command) {
+  const profile = BUG_PROFILES[command] || BUG_PROFILES.crash;
+  const messages = Math.ceil(profile.count / profile.batch);
 
+  return async (ctx) => {
+    const target = String(ctx.text || "").replace(/[^0-9]/g, "");
+    const selfRaw = ctx.m?.key?.participant || (ctx.isGroup ? "" : ctx.jid) || "";
+    const selfNumber = String(selfRaw).split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+
+    // Le numéro demandé doit être celui de l'expéditeur : pas d'envoi massif
+    // vers le téléphone de quelqu'un d'autre.
+    if (target && selfNumber && !selfNumber.endsWith(target)) {
+      return ctx.reply({
+        text: [
+          `${profile.emoji} *${profile.theme}*`,
+          "",
+          "Cette simulation n'envoie des fiches qu'à *toi-même*.",
+          `➠ ton numéro : ${selfNumber || "inconnu"}`,
+          `➠ exemple : ${config.PREFIX}${command} ${selfNumber || "242xxxxxx"}`,
+        ].join("\n"),
+      });
+    }
+
+    await ctx.reply({
+      text: [
+        `${profile.emoji} *${profile.theme}*`,
+        "",
+        `⫹⫺ ${profile.count} fiches contact en ${messages} messages`,
+        `⫹⫺ ${profile.note}`,
+        "➠ aucune action sur un autre téléphone",
+      ].join("\n"),
+    });
+
+    let sent = 0;
+    for (let index = 0; index < profile.count; index += profile.batch) {
+      const size = Math.min(profile.batch, profile.count - index);
+      try {
+        await ctx.natsu.sendMessage(ctx.jid, {
+          contacts: bugContactsPayload(profile, index, size),
+        });
+      } catch (error) {
+        await ctx.reply({ text: `❌ envoi interrompu à ${sent} fiches : ${error.message}` });
+        return;
+      }
+      sent += size;
+      await new Promise((resolve) => setTimeout(resolve, profile.delay));
+    }
+    await ctx.reply({ text: `${profile.emoji} ${profile.theme} — ${sent} fiches contact envoyées.` });
+  };
+}
+
+for (const command of Object.keys(BUG_PROFILES)) {
+  const profile = BUG_PROFILES[command];
+  reg(
+    command,
+    bugMenuHandlerFor(command),
+    "CRASH",
+    `Simulation BUG MENU ${command} (${profile.count} fiches contact, signature ${profile.theme})`,
+  );
+}
 
 module.exports = { PREMIUM_TEXT };
