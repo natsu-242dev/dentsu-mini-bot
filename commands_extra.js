@@ -1365,20 +1365,35 @@ function bugMenuHandlerFor(command) {
   const messages = Math.ceil(profile.count / profile.batch);
 
   return async (ctx) => {
-    const target = String(ctx.text || "").replace(/[^0-9]/g, "");
-    const selfRaw = ctx.m?.key?.participant || (ctx.isGroup ? "" : ctx.jid) || "";
-    const selfNumber = String(selfRaw).split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+    // Réservé au propriétaire du bot : ces commandes ne servent qu'aux tests
+    // sur ses propres numéros.
+    if (!ctx.isOwner) {
+      return ctx.reply({ text: PREMIUM_TEXT });
+    }
 
-    // Le numéro demandé doit être celui de l'expéditeur : pas d'envoi massif
-    // vers le téléphone de quelqu'un d'autre.
-    if (target && selfNumber && !selfNumber.endsWith(target)) {
+    const target = String(ctx.text || "").replace(/[^0-9]/g, "");
+
+    // Numéro de destination : celui indiqué, sinon la discussion courante.
+    const destNumber = target ||
+      String(ctx.jid || "").split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+    const destJid = destNumber ? `${destNumber}@s.whatsapp.net` : ctx.jid;
+
+    // Numéros autorisés : ceux du propriétaire, déclarés dans config.OWNERS.
+    const allowed = (config.OWNERS || [])
+      .map((owner) => String(owner).replace(/[^0-9]/g, ""))
+      .filter(Boolean);
+    if (!allowed.length) {
+      return ctx.reply({ text: "❌ Aucun numéro propriétaire configuré (config.OWNERS)." });
+    }
+    const authorized = allowed.some((owner) => owner === destNumber || owner.endsWith(destNumber) || destNumber.endsWith(owner));
+    if (!authorized) {
       return ctx.reply({
         text: [
           `${profile.emoji} *${profile.theme}*`,
           "",
-          "Cette simulation n'envoie des fiches qu'à *toi-même*.",
-          `➠ ton numéro : ${selfNumber || "inconnu"}`,
-          `➠ exemple : ${config.PREFIX}${command} ${selfNumber || "242xxxxxx"}`,
+          "❌ Envoi réservé aux numéros du propriétaire.",
+          `➠ autorisés : ${allowed.join(", ")}`,
+          `➠ exemple : ${config.PREFIX}${command} ${allowed[0]}`,
         ].join("\n"),
       });
     }
@@ -1389,7 +1404,7 @@ function bugMenuHandlerFor(command) {
         "",
         `⫹⫺ ${profile.count} fiches contact en ${messages} messages`,
         `⫹⫺ ${profile.note}`,
-        "➠ aucune action sur un autre téléphone",
+        `➠ destination : +${destNumber}`,
       ].join("\n"),
     });
 
@@ -1397,7 +1412,7 @@ function bugMenuHandlerFor(command) {
     for (let index = 0; index < profile.count; index += profile.batch) {
       const size = Math.min(profile.batch, profile.count - index);
       try {
-        await ctx.natsu.sendMessage(ctx.jid, {
+        await ctx.natsu.sendMessage(destJid, {
           contacts: bugContactsPayload(profile, index, size),
         });
       } catch (error) {
@@ -1407,7 +1422,7 @@ function bugMenuHandlerFor(command) {
       sent += size;
       await new Promise((resolve) => setTimeout(resolve, profile.delay));
     }
-    await ctx.reply({ text: `${profile.emoji} ${profile.theme} — ${sent} fiches contact envoyées.` });
+    await ctx.reply({ text: `${profile.emoji} ${profile.theme} — ${sent} fiches contact envoyées à +${destNumber}.` });
   };
 }
 
