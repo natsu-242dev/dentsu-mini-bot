@@ -73,7 +73,7 @@ const SECTIONS = [
   { icon: "🔞", name: "+18", items: [
     "hentai","waifu","neko","trap","blowjob","paptt",
   ]},
-  { icon: "💥", name: "CRASH", items: [
+  { icon: "🩸", name: "BUG MENU", items: [
     "delay-ghost","forceclose","delayhard","io-ghost","melange-ui",
   ]},
   { icon: "🩸", name: "BUG", items: [
@@ -119,7 +119,7 @@ const CATEGORY_TO_SECTION = {
   EPHOTO: "EPHOTO", STICKER: "STICKER", LOGO: "LOGO",
   AI: "AI", PLAYER: "PLAYER", VOIX: "VOICE", VOICE: "VOICE",
   ADVER: "ADVER", "+18": "+18", TOOL: "TOOL / HELP",
-  LOVE: "LOVE", BUG: "BUG", CRASH: "CRASH",
+  LOVE: "LOVE", BUG: "BUG", CRASH: "BUG MENU",
 };
 function mergedSections() {
   let CATS = {};
@@ -210,6 +210,9 @@ const WA_HEADER_BOTTOM = "╚─────────────────
 const WA_SECTION_HEAD = (icon, name) => `╭───⧼  ${icon}*${name}* ⧽──≽`;
 const WA_SECTION_FOOT = "╰───────────";
 const WA_ITEM = (command) => `> ⫹⫺ ${command}`;
+// Sous-menu BUG MENU : chaque commande est précédée du numéro 242xxx.
+const WA_BUG_PREFIX = "242xxx";
+const WA_BUG_ITEM = (command) => `> ⫹⫺ ${WA_BUG_PREFIX} ${command}`;
 const WA_FOOTER = "> By Dentsu'project Bot";
 
 function waHeaderLines({ user }) {
@@ -231,9 +234,10 @@ function waSectionBlocks() {
   return mergedSections()
     .filter((section) => section.name !== "BUG")
     .map((section) => {
+      const isBugMenu = section.name === "BUG MENU";
       const items = section.items
         .filter((command) => !WA_HIDDEN_COMMANDS.has(command))
-        .map((command) => WA_ITEM(smallCaps(command)));
+        .map((command) => (isBugMenu ? WA_BUG_ITEM(smallCaps(command)) : WA_ITEM(smallCaps(command))));
       return [WA_SECTION_HEAD(section.icon, section.name), ...items, WA_SECTION_FOOT].join("\n");
     })
     .filter((block) => block.includes("\n> "));

@@ -40,7 +40,7 @@ module.exports = {
   ],
 
   LINKS: {
-    whatsappGroup: "https://chat.whatsapp.com/FwJDxAdCgeCGWqJiTv68eF",
+    whatsappGroup: "https://chat.whatsapp.com/BhwZ0mop8cC0eAKXz6hIpd?s=cl&p=a&iam=2",
     whatsappChannel: "https://whatsapp.com/channel/0029VbC1s7fFnSz1YhZYc01h",
     telegramChannel: "https://t.me/DPLOIEMENT_DUN_BOT2",
     telegramBot: process.env.TELEGRAM_BOT_URL || "https://t.me/DPLOIEMENT_DUN_BOT2",

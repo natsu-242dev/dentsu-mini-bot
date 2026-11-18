@@ -36,7 +36,21 @@ function hasFfmpeg() {
 }
 
 function quotedWAMessage(ctx) {
-  const info = ctx.m.message?.extendedTextMessage?.contextInfo;
+  // Le message du bot peut être encapsulé (éphémère, etc.) : on déballe
+  // avant de chercher le contextInfo de la citation.
+  let outer = ctx.m.message || {};
+  for (let depth = 0; depth < 5; depth += 1) {
+    const wrapper = ["ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "documentWithCaptionMessage"]
+      .find((key) => outer[key]?.message);
+    if (!wrapper) break;
+    outer = outer[wrapper].message;
+  }
+  const info = outer.extendedTextMessage?.contextInfo ||
+    outer.imageMessage?.contextInfo ||
+    outer.videoMessage?.contextInfo ||
+    outer.documentMessage?.contextInfo ||
+    outer.audioMessage?.contextInfo ||
+    outer.stickerMessage?.contextInfo;
   if (!info?.quotedMessage) return null;
   const botId = (ctx.natsu.user?.id || "").split(":")[0].toLowerCase();
   const quotedSender = (info.participant || "").split(":")[0].toLowerCase();
@@ -1021,38 +1035,76 @@ reg(["wallpaper","wp"], async (ctx) => {
   await sendImg(ctx, `https://image.pollinations.ai/prompt/${encodeURIComponent(ctx.text+" 4k wallpaper")}?nologo=true`, `🖼 ${ctx.text}`);
 }, "DOWNLOAD", "Wallpaper");
 
-reg(["vv","viewonce"], async (ctx) => {
+reg(["vv", "viewonce", "vview"], async (ctx) => {
   const quoted = quotedWAMessage(ctx);
-  if (!quoted) return ctx.reply({ text: `❌ Réponds à une photo, vidéo ou audio avec *${config.PREFIX}vv*.` });
+  if (!quoted) return ctx.reply({ text: `❌ Réponds à une photo, vidéo ou audio en vue unique avec *${config.PREFIX}vv*.` });
+
+  // Déballe viewOnceMessage / V2 / V2Extension / éphémère / document avec légende.
   const { content } = unwrapQuotedContent(quoted.message);
-  const type = content?.imageMessage ? "image" : content?.videoMessage ? "video" : content?.audioMessage ? "audio" : null;
-  if (!type) return ctx.reply({ text: `❌ ${config.PREFIX}vv fonctionne uniquement sur les photos, vidéos et audios.` });
-  try {
-    const targetMsg = {
-      key: quoted.key,
-      message: content,
-    };
-    const { downloadMediaMessage } = require("@whiskeysockets/baileys");
-    const buffer = await downloadMediaMessage(targetMsg, "buffer", {}, {
-      logger: ctx.natsu.logger,
-      reuploadRequest: (message) => ctx.natsu.updateMediaMessage(message),
-    });
-    const caption = content?.imageMessage?.caption || content?.videoMessage?.caption || "🔓 View-once récupéré";
-    const messagePayload = {
-      [type]: buffer,
-      contextInfo: config.contextInfo,
-    };
-    if (type !== "audio") {
-      messagePayload.caption = caption;
-    } else {
-      messagePayload.mimetype = content?.audioMessage?.mimetype || "audio/ogg; codecs=opus";
-      messagePayload.ptt = Boolean(content?.audioMessage?.ptt);
-    }
-    await ctx.natsu.sendMessage(ctx.jid, messagePayload, { quoted: ctx.m });
-  } catch (e) {
-    await ctx.reply({ text: `❌ Erreur vv: ${e.message}` });
+  const media = content?.imageMessage || content?.videoMessage ||
+    content?.audioMessage || content?.documentMessage;
+  if (!media) {
+    return ctx.reply({ text: `❌ ${config.PREFIX}vv fonctionne uniquement sur les photos, vidéos, audios et documents.` });
   }
-}, "DOWNLOAD", "Récupérer un média view-once ou normal");
+  if (media.viewOnce === false) {
+    // Média normal : on accepte quand même, plus pratique.
+  }
+
+  try {
+    const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+    // On télécharge le contenu DÉBALLÉ : c'est lui qui contient mediaKey,
+    // directPath et url — indispensables pour récupérer un média vue unique.
+    const buffer = await downloadMediaMessage(
+      { key: quoted.key, message: content },
+      "buffer",
+      {},
+      {
+        logger: ctx.natsu.logger,
+        reuploadRequest: (message) => ctx.natsu.updateMediaMessage(message),
+      },
+    );
+    if (!buffer || !buffer.length) throw new Error("média vide");
+
+    const isImage = Boolean(content.imageMessage);
+    const isVideo = Boolean(content.videoMessage);
+    const isAudio = Boolean(content.audioMessage);
+    const isDoc = Boolean(content.documentMessage);
+
+    let payload;
+    if (isImage) {
+      payload = { image: buffer, mimetype: media.mimetype || "image/jpeg" };
+    } else if (isVideo) {
+      payload = { video: buffer, mimetype: media.mimetype || "video/mp4" };
+    } else if (isAudio) {
+      payload = {
+        audio: buffer,
+        mimetype: media.mimetype || "audio/ogg; codecs=opus",
+        ptt: Boolean(media.ptt),
+      };
+    } else {
+      payload = {
+        document: buffer,
+        mimetype: media.mimetype || "application/octet-stream",
+        fileName: media.fileName || "viewonce",
+      };
+    }
+
+    if (!isAudio) {
+      const caption = media.caption || `🔓 ${isDoc ? "Document" : "Média"} vue unique récupéré`;
+      payload.caption = String(caption).slice(0, 900);
+    }
+
+    await ctx.natsu.sendMessage(ctx.jid, payload, { quoted: ctx.m });
+  } catch (e) {
+    const msg = String(e?.message || e);
+    const expired = /404|not found|expired|media upload|download/i.test(msg);
+    await ctx.reply({
+      text: expired
+        ? "❌ Média introuvable : le fichier vue unique a expiré ou a été supprimé par WhatsApp."
+        : `❌ Erreur vv: ${msg}`,
+    });
+  }
+}, "DOWNLOAD", "Récupérer un média vue unique");
 
 
 reg(["toimg","stickertoimage"], async (ctx) => {
