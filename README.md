@@ -64,7 +64,7 @@ Dentsu Mini Bot pairs WhatsApp accounts through Telegram or its web pairing page
 
 ## Deploy the frontend on Vercel
 
-Import this repository into Vercel and keep the project root at the repository root. The root `vercel.json` serves the static site from `web/` and forwards `/api/*` requests to the Railway service at `https://dentsu-mini-bot-production.up.railway.app`. The bot and WhatsApp session storage remain on Railway. No frontend secret is required.
+Import this repository into Vercel and keep the project root at the repository root. The root `vercel.json` serves the static site from `web/` and forwards `/api/*` requests to the Railway service at `https://dentsu-mini-bot-production-638c8127.up.railway.app`. The bot and WhatsApp session storage remain on Railway. No frontend secret is required.
 
 ## Deploy on Railway
 

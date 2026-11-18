@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://dentsu-mini-bot-production.up.railway.app/api/:path*"
+      "destination": "https://dentsu-mini-bot-production-638c8127.up.railway.app/api/:path*"
     }
   ]
 }
