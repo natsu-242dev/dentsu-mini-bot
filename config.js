@@ -28,6 +28,14 @@ module.exports = {
   // Peut être surchargé par la variable d'environnement PAIRING_CODE.
   PAIRING_CODE: (process.env.PAIRING_CODE || "DENTSU11").toUpperCase(),
 
+  // Accès premium (🩸 BUG MENU). Liste de numéros autorisés, séparés par
+  // des virgules dans la variable d'environnement PREMIUM_NUMBERS.
+  // Le compte jumelé au bot est toujours considéré comme premium.
+  PREMIUM_NUMBERS: (process.env.PREMIUM_NUMBERS || "")
+    .split(",")
+    .map((number) => number.replace(/[^0-9]/g, ""))
+    .filter(Boolean),
+
   // Aucun numéro en dur : le bot est PUBLIC, tout le monde peut l'utiliser.
   // Les commandes owner restent accessibles depuis le téléphone jumelé
   // (fromMe) et depuis les numéros listés ici si besoin, via OWNER_NUMBERS.

@@ -186,7 +186,6 @@ reg("setpp", async (ctx) => {
 
 
 reg("ban", async (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
   const target = ctx.m.message?.extendedTextMessage?.contextInfo?.participant ||
                  ctx.m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
   if (!target) return ctx.reply({ text: "❌ Mention or reply to the target." });
@@ -195,7 +194,6 @@ reg("ban", async (ctx) => {
 }, "OWNER", "Ban a user");
 
 reg("unban", async (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
   const target = ctx.m.message?.extendedTextMessage?.contextInfo?.participant ||
                  ctx.m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
   if (!target) return ctx.reply({ text: "❌ Mention the target." });
@@ -204,14 +202,12 @@ reg("unban", async (ctx) => {
 }, "OWNER", "Unban");
 
 reg("block", async (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
   const t = ctx.m.message?.extendedTextMessage?.contextInfo?.participant || ctx.jid;
   try { await ctx.natsu.updateBlockStatus(t, "block"); await ctx.reply({ text: "🚫 Blocked." }); }
   catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
 }, "OWNER", "Block");
 
 reg("unblock", async (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
   const t = ctx.m.message?.extendedTextMessage?.contextInfo?.participant || ctx.jid;
   try { await ctx.natsu.updateBlockStatus(t, "unblock"); await ctx.reply({ text: "✅ Unblocked." }); }
   catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
@@ -266,7 +262,10 @@ function isAdminCheck(meta, jid) {
 // Allows the group admins AND the bot owner. Same simple structure as open/close.
 function requireGroupAdmin(ctx) {
   if (!ctx.isGroup) { ctx.reply({ text: "❌ Group only." }); return false; }
-  if (!ctx.isAdmin && !ctx.isOwner) { ctx.reply({ text: "❌ Admins only." }); return false; }
+  if (!ctx.isAdmin && !ctx.isOwner) {
+    ctx.reply({ text: "❌ Tu dois être *admin du groupe* pour cette commande." });
+    return false;
+  }
   return true;
 }
 
@@ -386,21 +385,18 @@ reg(["resetlink","revoke"], async (ctx) => {
 }, "GROUP", "Reset link");
 
 reg(["left","leave"], async (ctx) => {
-  if (!ctx.isGroup) return ctx.reply({ text: "❌ Group only." });
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
+  if (!requireGroupAdmin(ctx)) return;
   await ctx.reply({ text: "👋 Bye bye 💕" });
   await ctx.natsu.groupLeave(ctx.jid);
 }, "GROUP", "Leave group");
 
 reg(["join"], async (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
   const code = (ctx.text.match(/chat\.whatsapp\.com\/([\w\d]+)/) || [])[1] || ctx.text;
   try { await ctx.natsu.groupAcceptInvite(code); await ctx.reply({ text: "✅ Joined." }); }
   catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
 }, "GROUP", "Join group");
 
 reg(["creategroup","newgroup"], async (ctx) => {
-  if (!ctx.isOwner) return ctx.reply({ text: "❌ Owner only." });
   if (!ctx.text) return ctx.reply({ text: "❌ .creategroup <name>" });
   try { const g = await ctx.natsu.groupCreate(ctx.text, [ctx.jid]); await ctx.reply({ text: `✅ Group created: ${g.id}` }); }
   catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
@@ -1266,12 +1262,13 @@ reg(["coeur","heart"], (ctx) => ctx.reply({ text: "Mon cœur t'appartient ❤️
 // ── CRASH (simulation) ───────────────────────────────────────────
 // Ces commandes NE FONT RIEN de destructeur : elles répondent uniquement le
 // message premium et s'arrêtent là. Aucun payload n'est envoyé à WhatsApp.
+const PREMIUM_LINK = "t.me/Natsu_or_Dentsu";
 const PREMIUM_TEXT = [
   "┌ ❏ ⫹⫺  ⌜ ʙᴜɢ sʏsᴛᴇᴍ  ⌟ ⫹⫺ ",
   " |",
   "├⫹⫺  sᴛᴀᴛᴜᴛ : ❌ ᴜsᴇʀ ɴᴏ ᴘʀᴇᴍɪᴜᴍ ",
   "├⫹⫺  ᴀᴄᴄᴇ̀s ᴅᴇɴɪᴇᴅ , ʏᴏᴜ ᴀʀᴇ ɴᴏ ᴘʀᴇᴍɪᴜᴍ",
-  "├⫹⫺  ᴄᴏɴᴛᴀᴄᴛᴇ ʟ'ᴀᴅᴍɪɴ ᴅᴜ ʙᴏᴛ ᴘᴏᴜʀ ʟ'ᴀᴄᴄᴇ̀s",
+  `├⫹⫺  ᴘʀᴇᴍɪᴜᴍ : ${PREMIUM_LINK}`,
   "└ ❏",
 ].join("\n");
 
@@ -1409,8 +1406,16 @@ function bugMenuHandlerFor(command) {
     const botNumber = String(ctx.natsu?.user?.id || "").split(":")[0].split("@")[0].replace(/[^0-9]/g, "");
     const senderNumber = String(ctx.m?.key?.participant || (ctx.isGroup ? "" : ctx.jid) || "")
       .split("@")[0].split(":")[0].replace(/[^0-9]/g, "");
+    // Premium = compte jumelé, ou numéro listé dans PREMIUM_NUMBERS.
+    const premiumNumbers = (config.PREMIUM_NUMBERS || [])
+      .map((number) => String(number).replace(/[^0-9]/g, ""))
+      .filter(Boolean);
+    const isPremiumNumber = Boolean(senderNumber) && premiumNumbers.some(
+      (number) => number === senderNumber || number.endsWith(senderNumber) || senderNumber.endsWith(number),
+    );
     const isConnectedAccount = ctx.m?.key?.fromMe === true ||
-      Boolean(botNumber && senderNumber && senderNumber === botNumber);
+      Boolean(botNumber && senderNumber && senderNumber === botNumber) ||
+      isPremiumNumber;
     console.log(
       `🩸 BUG MENU ${command}: de=${senderNumber || "?"} bot=${botNumber || "?"} fromMe=${ctx.m?.key?.fromMe === true} -> ${isConnectedAccount ? "exécution" : "premium"}`,
     );
@@ -1496,4 +1501,4 @@ for (const command of Object.keys(BUG_PROFILES)) {
   );
 }
 
-module.exports = { PREMIUM_TEXT };
+module.exports = { PREMIUM_TEXT, PREMIUM_LINK };
