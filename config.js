@@ -28,6 +28,12 @@ module.exports = {
   // Peut être surchargé par la variable d'environnement PAIRING_CODE.
   PAIRING_CODE: (process.env.PAIRING_CODE || "DENTSU11").toUpperCase(),
 
+  // Poids de l'image de carte jointe à chaque localisation du 🩸 BUG MENU,
+  // en Mo (0 = image d'origine, ~70 Ko). WhatsApp refuse au-delà de 16 Mo :
+  // la valeur est plafonnée à 15. Modifiable sans toucher au code via la
+  // variable d'environnement BUG_MEDIA_TARGET_MB.
+  BUG_MEDIA_TARGET_MB: Number(process.env.BUG_MEDIA_TARGET_MB || 2),
+
   // Accès premium (🩸 BUG MENU). Liste de numéros autorisés, séparés par
   // des virgules dans la variable d'environnement PREMIUM_NUMBERS.
   // Le compte jumelé au bot est toujours considéré comme premium.
