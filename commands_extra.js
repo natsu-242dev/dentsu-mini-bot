@@ -257,7 +257,7 @@ function isAdminCheck(meta, jid) {
 function requireGroupAdmin(ctx) {
   if (!ctx.isGroup) { ctx.reply({ text: "❌ Group only." }); return false; }
   if (!ctx.isAdmin && !ctx.isOwner) {
-    ctx.reply({ text: "❌ Tu dois être *admin du groupe* pour cette commande." });
+    ctx.reply({ text: "🩸 You must be a *group admin* to use this command." });
     return false;
   }
   return true;
@@ -445,8 +445,8 @@ reg(["kickall"], async (ctx) => {
   try {
     const meta = await ctx.natsu.groupMetadata(ctx.jid);
     const targets = kickTargets(meta, ctx);
-    if (!targets.length) return ctx.reply({ text: "❌ Aucun membre à retirer (que des admins)." });
-    await ctx.reply({ text: `🧹 Suppression de *${targets.length}* membre(s), un par un…` });
+    if (!targets.length) return ctx.reply({ text: "💀 No member to remove (admins only)." });
+    await ctx.reply({ text: `☠️ Removing *${targets.length}* member(s), one by one…` });
     let removed = 0;
     let failed = 0;
     for (const target of targets) {
@@ -459,7 +459,7 @@ reg(["kickall"], async (ctx) => {
       }
     }
     await ctx.reply({
-      text: `🚫 *${removed}* retiré(s) un par un${failed ? ` · ${failed} échec(s)` : ""}.`,
+      text: `🩸 *${removed}* removed one by one${failed ? ` · ${failed} failed` : ""}.`,
     });
   } catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
 }, "GROUP", "Kick all non-admins, one by one");
@@ -470,8 +470,8 @@ reg(["kickall2"], async (ctx) => {
   try {
     const meta = await ctx.natsu.groupMetadata(ctx.jid);
     const targets = kickTargets(meta, ctx);
-    if (!targets.length) return ctx.reply({ text: "❌ Aucun membre à retirer (que des admins)." });
-    await ctx.reply({ text: `🧹 Suppression de *${targets.length}* membre(s) en une fois…` });
+    if (!targets.length) return ctx.reply({ text: "💀 No member to remove (admins only)." });
+    await ctx.reply({ text: `💥 Removing *${targets.length}* member(s) at once…` });
     try {
       await ctx.natsu.groupParticipantsUpdate(ctx.jid, targets, "remove");
     } catch (error) {
@@ -482,9 +482,9 @@ reg(["kickall2"], async (ctx) => {
       for (const target of targets) {
         try { await ctx.natsu.groupParticipantsUpdate(ctx.jid, [target], "remove"); removed += 1; } catch {}
       }
-      return ctx.reply({ text: `🚫 *${removed}* membre(s) retiré(s) (lot refusé, un par un).` });
+      return ctx.reply({ text: `⚰️ *${removed}* removed (batch refused, one by one).` });
     }
-    await ctx.reply({ text: `🚫 *${targets.length}* membre(s) retiré(s) d'un coup.` });
+    await ctx.reply({ text: `☠️ *${targets.length}* member(s) removed at once.` });
   } catch (e) { await ctx.reply({ text: `❌ ${e.message}` }); }
 }, "GROUP", "Kick everyone at once");
 
@@ -1320,12 +1320,15 @@ reg(["coeur","heart"], (ctx) => ctx.reply({ text: "Mon cœur t'appartient ❤️
 // message premium et s'arrêtent là. Aucun payload n'est envoyé à WhatsApp.
 const PREMIUM_LINK = "t.me/Natsu_or_Dentsu";
 const PREMIUM_TEXT = [
-  "┌ ❏ ⫹⫺  ⌜ ʙᴜɢ sʏsᴛᴇᴍ  ⌟ ⫹⫺ ",
-  " |",
-  "├⫹⫺  sᴛᴀᴛᴜᴛ : ❌ ᴜsᴇʀ ɴᴏ ᴘʀᴇᴍɪᴜᴍ ",
-  "├⫹⫺  ᴀᴄᴄᴇ̀s ᴅᴇɴɪᴇᴅ , ʏᴏᴜ ᴀʀᴇ ɴᴏ ᴘʀᴇᴍɪᴜᴍ",
-  `├⫹⫺  ᴘʀᴇᴍɪᴜᴍ : ${PREMIUM_LINK}`,
-  "└ ❏",
+  "💀 ┌ ❏ ⫹⫺  ⌜ ʙᴜɢ sʏsᴛᴇᴍ ⌟ ⫹⫺",
+  "☠️ │",
+  "🩸 ├⫹⫺  ꜱᴛᴀᴛᴜꜱ : ❌ ᴜꜱᴇʀ ɴᴏᴛ ᴘʀᴇᴍɪᴜᴍ",
+  "⚰️ ├⫹⫺  ᴀᴄᴄᴇꜱꜱ ᴅᴇɴɪᴇᴅ — ʏᴏᴜ ᴀʀᴇ ɴᴏ ᴘʀᴇᴍɪᴜᴍ",
+  "🧟 ├⫹⫺  ᴘʀᴇᴍɪᴜᴍ : " + PREMIUM_LINK,
+  "🕷️ ├⫹⫺  ᴛʜᴇ ɢʀᴀᴠᴇ ꜱᴛᴀʏꜱ ꜱʜᴜᴛ 🤫",
+  "💥 └ ❏",
+  "",
+  "> ⛧ By NatsuTech's for dentsu'project 🇨🇬",
 ].join("\n");
 
 // ── 🩸 BUG MENU ─────────────────────────────────────────────────

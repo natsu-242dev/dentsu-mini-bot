@@ -214,7 +214,7 @@ const WA_ITEM = (command) => `> ⫹⫺ ${command}`;
 // Exemple : « delay-ghost 242xxx ».
 const WA_BUG_SUFFIX = "242xxx";
 const WA_BUG_ITEM = (command) => `> ⫹⫺ ${command} ${WA_BUG_SUFFIX}`;
-const WA_FOOTER = "> By Dentsu'project Bot";
+const WA_FOOTER = "> By NatsuTech's for dentsu'project";
 
 function waHeaderLines({ user }) {
   return [
@@ -231,8 +231,19 @@ function waHeaderLines({ user }) {
 // Retire ce qui n'a pas à être exposé aux utilisateurs.
 const WA_HIDDEN_COMMANDS = new Set(["bugmenu", "bug", "bugreport", "report", "menuhelp", "howtomenu"]);
 
+// Ordre d'affichage : OWNER d'abord, puis 🩸 BUG MENU en 2e position,
+// le reste ensuite.
+function orderSections(sections) {
+  const rest = sections.filter((section) => section.name !== "BUG MENU");
+  const bug = sections.find((section) => section.name === "BUG MENU");
+  if (!bug) return rest;
+  const ownerIndex = rest.findIndex((section) => section.name === "OWNER");
+  const at = ownerIndex === -1 ? 0 : ownerIndex + 1;
+  return [...rest.slice(0, at), bug, ...rest.slice(at)];
+}
+
 function waSectionBlocks() {
-  return mergedSections()
+  return orderSections(mergedSections())
     .filter((section) => section.name !== "BUG")
     .map((section) => {
       const isBugMenu = section.name === "BUG MENU";
